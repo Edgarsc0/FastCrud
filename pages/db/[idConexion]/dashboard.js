@@ -4,7 +4,7 @@ import axios from "axios";
 
 export default function ({ idConexion, descripciones, dbName }) {
     return <>
-        <Heading className="p-5" color="blue">
+        <Heading className="p-5" color="cyan">
             Conexion: {dbName}
         </Heading>
         <Text className="mx-5" size="3">Identificador de la conexion: <Strong>{idConexion}</Strong></Text>
@@ -13,6 +13,7 @@ export default function ({ idConexion, descripciones, dbName }) {
             {descripciones ? (
                 <>
                     {descripciones.map((tabla) => (
+
                         <Box key={tabla.name}>
                             <Card>
                                 <Badge color="blue" className="mb-2">Tabla</Badge>
@@ -34,15 +35,28 @@ export default function ({ idConexion, descripciones, dbName }) {
                                                 <Table.Root>
                                                     <Table.Header>
                                                         <Table.Row>
-                                                            <Table.ColumnHeaderCell>Field</Table.ColumnHeaderCell>
-                                                            <Table.ColumnHeaderCell>Type</Table.ColumnHeaderCell>
-                                                            <Table.ColumnHeaderCell>Null</Table.ColumnHeaderCell>
+                                                            <Table.ColumnHeaderCell>
+                                                                <Text color="cyan">
+                                                                    Field
+                                                                </Text>
+                                                            </Table.ColumnHeaderCell>
+                                                            <Table.ColumnHeaderCell>
+                                                                <Text color="cyan">
+                                                                    Type
+                                                                </Text>
+                                                            </Table.ColumnHeaderCell>
+                                                            <Table.ColumnHeaderCell>
+                                                                <Text color="cyan">
+                                                                    Null
+                                                                </Text>
+                                                            </Table.ColumnHeaderCell>
                                                         </Table.Row>
                                                     </Table.Header>
 
                                                     <Table.Body>
                                                         {tabla.fields.map(campo => (
                                                             <Table.Row key={campo.Field}>
+
                                                                 <Table.RowHeaderCell>
                                                                     {campo.Field}
                                                                 </Table.RowHeaderCell>
@@ -50,7 +64,7 @@ export default function ({ idConexion, descripciones, dbName }) {
                                                                     {campo.Type}
                                                                 </Table.Cell>
                                                                 <Table.Cell>
-                                                                    {campo.Null == "No" ? ("NO") : "YES"}
+                                                                    {campo.Null == "NO" ? ("NO") : "YES"}
                                                                 </Table.Cell>
                                                             </Table.Row>
                                                         ))}
@@ -79,7 +93,7 @@ export default function ({ idConexion, descripciones, dbName }) {
                                     <Badge color="crimson">DELETE</Badge>
                                 </Flex>
                                 <Text>
-                                    {`/api/db/<idConexion>/${tabla.name}`}
+                                    {`/api/db/:idConexion/${tabla.name}`}
 
                                 </Text>
                             </Card>

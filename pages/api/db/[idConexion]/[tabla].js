@@ -15,51 +15,118 @@ export default async function (req, res) {
         port: DBPORT
     });
     const connection = await pool.getConnection();
+
+    //CONSULTAR ELEMENTOS 
+    const GET = async () => {
+        const parametrosEnviados = Object.keys(req.body);
+        if (parametrosEnviados.length != 0) {
+            try {
+                const rows = await (parametrosEnviados.length > 1 ? (async () => {
+                    const whereClause = parametrosEnviados.map(param => `${param} = ?`).join(' AND ');
+                    const sqlQuery = `SELECT * FROM ${tabla} WHERE ${whereClause}`;
+                    const [rows, field] = await connection.execute(sqlQuery, Object.values(req.body));
+                    pool.releaseConnection();
+                    return rows;
+                }) : (async () => {
+                    const [param] = parametrosEnviados;
+                    const sqlQuery = `select * from ${tabla} where ${param}=?`;
+                    const [rows, field] = await connection.execute(sqlQuery, [req.body[param]]);
+                    pool.releaseConnection();
+                    return rows;
+                }))();
+                return res.status(200).json({
+                    rows
+                });
+            } catch (err) {
+                return res.status(500).json({ err });
+            }
+        } else {
+            try {
+                const sqlQuery = `select * from ${tabla}`;
+                const [rows, fields] = await connection.execute(sqlQuery);
+                pool.releaseConnection();
+                return res.status(200).json({
+                    rows
+                });
+            } catch (err) {
+                return res.status(200).json({
+                    err
+                });
+            }
+        }
+    }
+
+    //AGREGAR ELEMENTOS
+    const POST = async () => {
+        try {
+            const results = []
+            await Promise.all(req.body.map(async info => {
+                const parametrosEnviados = Object.keys(info);
+                const campos = parametrosEnviados.join(',');
+                const placeholders = parametrosEnviados.map(() => '?').join(',');
+                const sqlQuery = `INSERT INTO ${tabla} (${campos}) VALUES (${placeholders})`;
+                const [rows, fields] = await connection.execute(sqlQuery, Object.values(info));
+                results.push({
+                    insertedInfo: info,
+                    result: [rows]
+                });
+                pool.releaseConnection();
+            }));
+            return res.status(200).json({ results });
+        } catch (err) {
+            return res.status(500).json({ err })
+        }
+    }
+
+    //ACTUALIZACION DE ELEMENTOS
+    const PATCH = async () => {
+        const { set, where, limit } = req.body;
+        try {
+            const setQuery = Object.keys(set).map(field => `${field}=?`).join(",");
+            const whereQuery = Object.keys(where).map(field => `${field}=?`).join(" and ");
+            const sqlQuery = `update ${tabla} set ${setQuery} where ${whereQuery} ${limit ? (`limit ${limit}`) : (``)}`;
+            const [rows, fields] = await connection.execute(sqlQuery, [...Object.values(set), ...Object.values(where)]);
+            pool.releaseConnection();
+            return res.status(200).json({
+                rows
+            });
+        } catch (err) {
+            return res.status(500).json({
+                err: err.message
+            });
+        }
+    }
+
+    //DELETE DE ELEMENTOS
+    const DELETE = async () => {
+        const { where, limit } = req.body;
+        try {
+            const whereQuery = Object.keys(where).map(field => `${field}=?`).join(" and ");
+            const sqlQuery = `delete from ${tabla} where ${whereQuery} ${limit ? (`limit ${limit}`) : (``)}`;
+            const [rows, fields] = await connection.execute(sqlQuery, Object.values(where));
+            pool.releaseConnection();
+            return res.status(200).json({
+                rows
+            });
+        } catch (err) {
+            return res.status(500).json({
+                err: err
+            })
+        }
+    }
+
     switch (req.method) {
         case "GET":
-            const parametrosEnviados = Object.keys(req.body);
-            if (parametrosEnviados.length != 0) {
-                try {
-                    const rows = await (parametrosEnviados.length > 1 ? (async () => {
-                        let sqlQuery = `select * from ${tabla} where `;
-                        parametrosEnviados.map((param, index) => {
-                            index == parametrosEnviados.length - 1 ? sqlQuery += `${param}="${req.body[param]}"` : sqlQuery += `${param}="${req.body[param]}" and `;
-                        });
-                        const [rows, field] = await connection.execute(sqlQuery);
-                        return rows;
-                    }) : (async () => {
-                        const [param] = parametrosEnviados;
-                        const sqlQuery = `select * from ${tabla} where ${param}=${req.body[param]}`;
-                        const [rows, field] = await connection.execute(sqlQuery);
-                        return rows;
-                    }))();
-                    res.status(200).json({
-                        rows
-                    });
-                }catch(err){
-                    res.status(500).json({err});
-                }
-            } else {
-                try{
-                    const sqlQuery = `select * from ${tabla}`;
-                    console.log(DBNAME)
-                    const [rows, fields] = await connection.execute(sqlQuery);
-                    pool.releaseConnection();
-                    res.status(200).json({
-                        rows
-                    });
-                }catch(err){
-                    res.status(200).json({
-                        err
-                    });
-                }
-            }
-            break;
+            return GET();
         case "POST":
-            break;
+            return POST();
         case "PATCH":
-            break;
+            return PATCH();
         case "DELETE":
-            break;
+            return DELETE();
+        default:
+            return res.status(405).json({
+                message: "method not allowed"
+            })
     }
 }
