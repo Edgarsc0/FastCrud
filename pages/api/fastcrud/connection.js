@@ -1,5 +1,15 @@
+/*const pool = mysql2.createPool({
+    host: DBHOST,
+    user: DBUSER,
+    database: DBNAME,
+    password: DBPASSWORD,
+    port: DBPORT
+});
+await pool.getConnection();
+pool.releaseConnection();*/
+
 import CryptoJS from "crypto-js";
-import mysql2 from "mysql2/promise";
+import sql from "mssql";
 import con from "../db/config";
 import jwt from "jsonwebtoken";
 
@@ -11,15 +21,19 @@ export default async function (req, res) {
         DBNAME
     } = req.body;
     try {
-        const pool = mysql2.createPool({
-            host: DBHOST,
+
+        const sqlConfig = {
             user: DBUSER,
-            database: DBNAME,
             password: DBPASSWORD,
+            database: DBNAME,
+            server: DBHOST,
+            options: {
+                encrypt: false,
+                trustServerCertificate: true
+            },
             port: DBPORT
-        });
-        await pool.getConnection();
-        pool.releaseConnection();
+        }
+        await sql.connect(sqlConfig);
         const token = jwt.sign({
             DBHOST,
             DBPORT,
@@ -36,7 +50,7 @@ export default async function (req, res) {
             idConexion,
         });
     } catch (err) {
-        console.log(err);
+        console.log(err)
         res.status(401).json({
             status: "Invalid Credentials",
             error: err

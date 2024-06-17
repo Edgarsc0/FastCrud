@@ -1,11 +1,11 @@
 import mysql2 from "mysql2/promise";
 
 const pool = mysql2.createPool(({
-    host: "localhost",
+    host: "roundhouse.proxy.rlwy.net",
     user: "root",
     database: "fastCrud",
-    password: "Hal02012()",
-    port: 3306
+    password: "kykIbwMYTlThoCyLaQhdgoojcDIIVeqp",
+    port: 46892
 }));
 
 const con = await pool.getConnection();

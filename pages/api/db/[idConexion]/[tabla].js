@@ -1,32 +1,83 @@
-import mysql2 from "mysql2/promise";
+import sql from "mssql";
 import axios from "axios";
+import { ContentPasteOffSharp } from "@mui/icons-material";
 
 export default async function (req, res) {
+    console.log(req);
     const { idConexion, tabla } = req.query;
-    const credentialsInfo = await axios.post("http://localhost:3000/api/fastcrud/getCredentials", {
+    const credentialsInfo = await axios.post("http://localhost:3001/api/fastcrud/getCredentials", {
         idConexion
     });
     const { DBHOST, DBPORT, DBPASSWORD, DBUSER, DBNAME } = credentialsInfo.data;
-    const pool = mysql2.createPool({
-        host: DBHOST,
+
+    //CONEXION
+    const sqlConfig = {
         user: DBUSER,
-        database: DBNAME,
         password: DBPASSWORD,
+        database: DBNAME,
+        server: DBHOST,
+        options: {
+            encrypt: false,
+            trustServerCertificate: true
+        },
         port: DBPORT
-    });
-    const connection = await pool.getConnection();
+    }
+    const pool = await sql.connect(sqlConfig);
+
+    const types = {
+        int: sql.Int,
+        varchar: sql.VarChar,
+        datetime: sql.DateTime,
+        date: sql.Date
+    }
 
     //CONSULTAR ELEMENTOS 
     const GET = async () => {
-        const parametrosEnviados = Object.keys(req.body);
-        if (parametrosEnviados.length != 0) {
+        //const parametrosEnviados = Object.keys(req.body);
+
+        const { search } = req.body;
+        if (req.body && search) {
             try {
-                const rows = await (parametrosEnviados.length > 1 ? (async () => {
-                    const whereClause = parametrosEnviados.map(param => `${param} = ?`).join(' AND ');
+
+                let whereClause = [];
+                search.map(param => whereClause.push(`${param.name}=@${param.name}`));
+                const sqlQuery = `select * from ${tabla} where ${whereClause.join(" and ")}`;
+                const request = pool.request();
+                search.map((param) => {
+                    request.input(`${param.name}`, types[param.type], param.value);
+                })
+                const response = await request.query(sqlQuery);
+                return res.status(200).json({
+                    response
+                })
+            } catch (error) {
+                //console.log(error)
+                return res.status(500).json({ error })
+            }
+        } else {
+            try {
+                const sqlQuery = `select * from ${tabla}`;
+                const response = await pool.request().query(sqlQuery);
+                return res.status(200).json({ response });
+            } catch (error) {
+                console.log(error)
+                return res.status(500).json({ error })
+            }
+        }
+        /*if (parametrosEnviados.length != 0) {
+            try {
+                const result = await (parametrosEnviados.length > 1 ? (async () => {
+                    const whereClause = parametrosEnviados.map((param, index) => `${param} = @value${index}`).join(' AND ');
                     const sqlQuery = `SELECT * FROM ${tabla} WHERE ${whereClause}`;
-                    const [rows, field] = await connection.execute(sqlQuery, Object.values(req.body));
-                    pool.releaseConnection();
-                    return rows;
+                    const request = pool.request();
+                    parametrosEnviados.map((param, index) => {
+                        request.input(`value${index}`, parametrosEnviados[param])
+                    })
+                    
+                    const result = await request.query(sqlQuery);
+
+
+                    return result;
                 }) : (async () => {
                     const [param] = parametrosEnviados;
                     const sqlQuery = `select * from ${tabla} where ${param}=?`;
@@ -35,7 +86,7 @@ export default async function (req, res) {
                     return rows;
                 }))();
                 return res.status(200).json({
-                    rows
+                    result
                 });
             } catch (err) {
                 return res.status(500).json({ err });
@@ -53,12 +104,43 @@ export default async function (req, res) {
                     err
                 });
             }
-        }
+        }*/
     }
 
     //AGREGAR ELEMENTOS
     const POST = async () => {
+        console.log("peticion recibida...");
         try {
+            const { fields, placeholders } = req.body;
+            const campos = fields.join(",");
+            let fieldValues = [];
+            placeholders.map((info, index) => {
+                const infoValues = []
+                let i = 0;
+                info.map(() => {
+                    infoValues.push(`@value${index}${i}`);
+                    i++;
+                });
+                fieldValues.push(infoValues);
+
+            })
+            const sqlQuery = `insert into ${tabla}(${campos}) values${fieldValues.map(values => `(${values.join(',')})`)}`;
+            const request = pool.request()
+            placeholders.map((info, index) => {
+                let i = 0;
+                info.map((values) => {
+                    request.input(`value${index}${i}`, types[values.type], values.value);
+                    i++;
+                })
+            })
+            const response = await request.query(sqlQuery);
+            return res.status(200).json({ response })
+
+        } catch (error) {
+            console.log(error);
+            return res.status(500).json({ error })
+        }
+        /*try {
             const results = []
             await Promise.all(req.body.map(async info => {
                 const parametrosEnviados = Object.keys(info);
@@ -75,7 +157,7 @@ export default async function (req, res) {
             return res.status(200).json({ results });
         } catch (err) {
             return res.status(500).json({ err })
-        }
+        }*/
     }
 
     //ACTUALIZACION DE ELEMENTOS
