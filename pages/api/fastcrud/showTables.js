@@ -3,7 +3,7 @@ import axios from "axios";
 
 export default async function (req, res) {
     const { idConexion } = req.body;
-    const credentialsInfo = await axios.post("http://localhost:3000/api/fastcrud/getCredentials", {
+    const credentialsInfo = await axios.post("https://fast-crud.vercel.app/api/fastcrud/getCredentials", {
         idConexion
     });
     const { DBHOST, DBPORT, DBPASSWORD, DBUSER, DBNAME } = credentialsInfo.data;
