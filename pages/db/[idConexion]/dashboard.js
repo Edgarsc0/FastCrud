@@ -107,11 +107,11 @@ export default function ({ idConexion, descripciones, dbName }) {
 
 export async function getStaticProps(ctx) {
     const idConexion = ctx.params.idConexion;
-    const infoTables = await axios.post("/api/fastcrud/showTables", {
+    const infoTables = await axios.post("./api/fastcrud/showTables", {
         idConexion
     });
     const promises = infoTables.data.tablas.map(async (tabla) => {
-        const info = await axios.post("/api/fastcrud/getTableInfo", {
+        const info = await axios.post("./api/fastcrud/getTableInfo", {
             idConexion,
             tabla
         });
@@ -131,7 +131,7 @@ export async function getStaticProps(ctx) {
 }
 
 export async function getStaticPaths() {
-    const { data } = await axios.get("/api/fastcrud/getAllConections");
+    const { data } = await axios.get("./api/fastcrud/getAllConections");
     const { idConections } = data;
     const paths = idConections.map((id) => ({
         params: {
